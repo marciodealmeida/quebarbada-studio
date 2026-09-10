@@ -1,0 +1,92 @@
+name: Deploy Studio
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configurar SSH
+        env:
+          PRIVATE_KEY: ${{ secrets.HOSTINGER_SSH_PRIVATE_KEY }}
+          KNOWN_HOSTS: ${{ secrets.HOSTINGER_SFTP_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$PRIVATE_KEY" > "$HOME/.ssh/id_ed25519"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          chmod 644 "$HOME/.ssh/known_hosts"
+
+      - name: Testar conexão SSH
+        env:
+          HOST: ${{ vars.HOSTINGER_HOST }}
+          PORT: ${{ vars.HOSTINGER_PORT }}
+          USER: ${{ vars.HOSTINGER_USER }}
+        run: |
+          ssh \
+            -i "$HOME/.ssh/id_ed25519" \
+            -p "$PORT" \
+            "$USER@$HOST" \
+            'echo "SSH Hostinger OK"'
+
+      - name: Atualizar aplicação
+        env:
+          HOST: ${{ vars.HOSTINGER_HOST }}
+          PORT: ${{ vars.HOSTINGER_PORT }}
+          USER: ${{ vars.HOSTINGER_USER }}
+        run: |
+          ssh \
+            -i "$HOME/.ssh/id_ed25519" \
+            -p "$PORT" \
+            "$USER@$HOST" <<'EOF'
+          set -e
+
+          APP="/home/u415246071/studio-quebarbada-app"
+          PUBLIC="/home/u415246071/domains/quebarbada.com.br/public_html/studio-quebarbada"
+
+          cd "$APP"
+
+          git fetch origin main
+          git reset --hard origin/main
+
+          composer install \
+            --no-dev \
+            --optimize-autoloader \
+            --no-interaction \
+            --no-progress \
+            --no-scripts
+
+          php artisan migrate --force
+
+          rm -rf "$PUBLIC"/*
+          rm -rf "$PUBLIC"/.[!.]* "$PUBLIC"/..?* 2>/dev/null || true
+
+          cp -a "$APP/public/." "$PUBLIC/"
+
+          sed -i \
+            "s#__DIR__.'/../vendor/autoload.php'#'/home/u415246071/studio-quebarbada-app/vendor/autoload.php'#" \
+            "$PUBLIC/index.php"
+
+          sed -i \
+            "s#__DIR__.'/../bootstrap/app.php'#'/home/u415246071/studio-quebarbada-app/bootstrap/app.php'#" \
+            "$PUBLIC/index.php"
+
+          chmod -R 775 "$APP/storage" "$APP/bootstrap/cache"
+
+          php artisan optimize:clear || true
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+
+          echo "Deploy finalizado"
+          EOF
