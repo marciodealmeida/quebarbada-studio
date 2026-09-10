@@ -1,0 +1,11 @@
+{
+    "mcpServers": {
+        "laravel-boost": {
+            "command": "/usr/bin/php8.3",
+            "args": [
+                "/var/www/Proprios/quebarbada-studio/artisan",
+                "boost:mcp"
+            ]
+        }
+    }
+}
