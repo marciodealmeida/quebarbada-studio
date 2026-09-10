@@ -27,18 +27,6 @@ jobs:
           chmod 600 "$HOME/.ssh/id_ed25519"
           chmod 644 "$HOME/.ssh/known_hosts"
 
-      - name: Testar conexão SSH
-        env:
-          HOST: ${{ vars.HOSTINGER_HOST }}
-          PORT: ${{ vars.HOSTINGER_PORT }}
-          USER: ${{ vars.HOSTINGER_USER }}
-        run: |
-          ssh \
-            -i "$HOME/.ssh/id_ed25519" \
-            -p "$PORT" \
-            "$USER@$HOST" \
-            'echo "SSH Hostinger OK"'
-
       - name: Atualizar aplicação
         env:
           HOST: ${{ vars.HOSTINGER_HOST }}
@@ -46,10 +34,15 @@ jobs:
           USER: ${{ vars.HOSTINGER_USER }}
         run: |
           ssh \
+            -o ConnectTimeout=30 \
+            -o ServerAliveInterval=15 \
+            -o ServerAliveCountMax=4 \
             -i "$HOME/.ssh/id_ed25519" \
             -p "$PORT" \
             "$USER@$HOST" <<'EOF'
           set -e
+
+          echo "SSH Hostinger OK"
 
           APP="/home/u415246071/studio-quebarbada-app"
           PUBLIC="/home/u415246071/domains/quebarbada.com.br/public_html/studio-quebarbada"
