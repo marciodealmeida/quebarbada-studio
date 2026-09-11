@@ -13,7 +13,7 @@ class Video extends Model
     /** @use HasFactory<VideoFactory> */
     use HasFactory;
 
-    protected $fillable = ['channel_id', 'status', 'content_type', 'topic', 'script', 'narration', 'resolution', 'estimated_duration_seconds', 'estimated_cost_usd', 'metadata', 'output_path', 'actual_duration_seconds', 'actual_cost_usd'];
+    protected $fillable = ['channel_id', 'status', 'content_type', 'topic', 'script', 'narration', 'narration_final_text', 'resolution', 'estimated_duration_seconds', 'estimated_cost_usd', 'metadata', 'output_path', 'actual_duration_seconds', 'actual_cost_usd'];
 
     protected function casts(): array
     {
